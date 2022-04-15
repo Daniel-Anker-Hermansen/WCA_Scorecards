@@ -1,10 +1,17 @@
 [package]
-name = "scorecards"
+name = "wca_scorecards"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "wca_scorecards"
+crate-type = ["cdylib"]
 
 [dependencies]
 printpdf = "0.5.2"
 font-kit = "0.11.0"
+
+[dependencies.pyo3]
+version = "0.16.4"
+features = ["extension-module"]
