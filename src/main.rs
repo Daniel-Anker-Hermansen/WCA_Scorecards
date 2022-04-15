@@ -92,20 +92,7 @@ fn main() {
             _ => panic!("Malformatted time limit for event: {}", event)
         };
     });
-    /*
-    limits.insert("333", TimeLimit::Cumulative(60000));
-    limits.insert("222", TimeLimit::Single(6000));
-    limits.insert("pyram", TimeLimit::Single(6000));
-    limits.insert("skewb", TimeLimit::Single(6000));
-    limits.insert("444", TimeLimit::Cumulative(36000));
-    limits.insert("333bf", TimeLimit::Cumulative(90000));
-    limits.insert("minx", TimeLimit::Cumulative(66000));
-    limits.insert("333oh", TimeLimit::Cumulative(24000));
-    limits.insert("clock", TimeLimit::Cumulative(12000));
-    limits.insert("666", TimeLimit::SharedCumulative(126000, vec!["666", "777"]));
-    limits.insert("777", TimeLimit::SharedCumulative(126000, vec!["666", "777"]));
-    */
-    let doc = scorecards_to_pdf(k, "Odsherred Forårscubing 2022", &map, &limits);
+    let doc = scorecards_to_pdf(k, &args.next().unwrap(), &map, &limits);
     doc.save(&mut BufWriter::new(File::create(format!("{}_scorecards.pdf", &csv[..csv.len() - 4])).unwrap())).unwrap();
 }
 
