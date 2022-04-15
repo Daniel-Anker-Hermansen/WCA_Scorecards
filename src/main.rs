@@ -1,10 +1,13 @@
+use font_kit::family_name::FamilyName;
+use font_kit::handle::Handle;
 use font_kit::loaders::default::Font;
+use font_kit::properties::Properties;
+use font_kit::source::SystemSource;
 use printpdf::{PdfDocumentReference, PdfDocument, Mm, Point, Line, LineDashPattern, Color, Greyscale, PdfLayerReference, IndirectFontRef};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufWriter;
 use std::env::args;
-
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct Scorecard<'a> {
@@ -24,33 +27,110 @@ enum TimeLimit<'a> {
     None
 }
 
+struct Language {
+    round: String,
+    group: String,
+    scram: String,
+    result: String,
+    judge: String,
+    comp: String,
+    extra_attempts: String,
+    time_limit: String,
+    cumulative_limit: String,
+    for_scl: String,
+    and_scl: String,
+    curoff: String,
+    multi_tl: String,
+    e333: String,
+    e444: String,
+    e555: String,
+    e666: String,
+    e777: String,
+    e222: String,
+    e333oh: String,
+    eclock: String,
+    eminx: String,
+    epyram: String,
+    e333bf: String,
+    e444bf: String,
+    e555bf: String,
+    e333mbf: String,
+    esq1: String,
+    eskewb: String
+}
+
+impl Language {
+    fn english() -> Self {
+        Language { 
+            round: format!("Round"), 
+            group: format!("Group"), 
+            scram: format!("scram"), 
+            result: format!("result"), 
+            judge: format!("judge"), 
+            comp: format!("comp"), 
+            extra_attempts: format!("Extra attempts"),
+            time_limit: format!("Time limit"), 
+            cumulative_limit: format!("Cumulative limit"), 
+            for_scl: format!("for"), 
+            and_scl: format!("and"), 
+            curoff: format!("Two attempts to get below"), 
+            multi_tl: format!("10:00 per cube up to 60:00"), 
+            e333: format!("3x3x3 Cube"), 
+            e444: format!("4x4x4 Cube"), 
+            e555: format!("5x5x5 Cube"), 
+            e666: format!("6x6x6 Cube"), 
+            e777: format!("7x7x7 Cube"), 
+            e222: format!("2x2x2 Cube"), 
+            e333oh: format!("3x3x3 Cube One Handed"), 
+            eclock: format!("Clock"), 
+            eminx: format!("Megaminx"), 
+            epyram: format!("Pyraminx"), 
+            e333bf: format!("3x3x3 Blindfolded"), 
+            e444bf: format!("4x4x4 Blindfolded"), 
+            e555bf: format!("5x5x5 Blindfolded"), 
+            e333mbf: format!("Multiple Blindfolded"), 
+            esq1: format!("Square 1"), 
+            eskewb: format!("Skewb")
+        }
+    }
+}
+
 fn main() {
+    run(Language::english());
+}
+
+fn run(language: Language) {
     let mut args = args();
-    let csv = args.nth(1).unwrap();
-    let data = std::fs::read_to_string(csv.clone()).unwrap();
+    let csv = args.next().unwrap();
+    let data = match std::fs::read_to_string(csv.clone()) {
+        Err(_) => panic!("Could not find csv for groups and stations"),
+        Ok(s) => s
+    };
     let mut csv_file = data.lines();
-    let header = csv_file.next().unwrap().split(",").skip(1);
-    let mut curr = 0;
+    let header = csv_file.next().unwrap().split(",").skip(2);
     let mut map = HashMap::new();
-    let mut k = csv_file.map(|person|{
-        let mut iter = person.split(",");
-        let name = iter.next().unwrap();
-        curr += 1;
-        map.insert(curr, name);
-        iter.zip(header.clone()).map(move |(asign, event)|{
-            if asign == "" {
-                return (curr, event, None, None)
+    let mut k = csv_file
+        .filter(|x|*x != "")
+        .map(|person|{
+            let mut iter = person.split(",");
+            let name = iter.next().unwrap();
+            let id = usize::from_str_radix(iter.next().unwrap(), 10).unwrap();
+            map.insert(id, name);
+            iter.zip(header.clone()).map(move |(asign, event)|{
+                if asign == "" {
+                    return (id, event, None, None)
+                }
+                else {
+                    let mut info = asign.split(";");
+                    let group = match info.next() {
+                        None => return (id, event, None, None),
+                        Some(v) => i8::from_str_radix(v, 10).unwrap()
+                    };
+                    let station = i8::from_str_radix(info.next().unwrap(), 10).unwrap();
+                    (id, event, Some(group), Some(station))
+                }
             }
-            else {
-                let mut info = asign.split(";");
-                let group = match info.next() {
-                    None => return (curr, event, None, None),
-                    Some(v) => i8::from_str_radix(v, 10).unwrap()
-                };
-                let station = i8::from_str_radix(info.next().unwrap(), 10).unwrap();
-                (curr, event, Some(group), Some(station))
-            }
-        })
+        )
     })
         .flatten()
         .filter(|(_, event, v, _)|v.is_some() && *event != "333fm")
@@ -67,7 +147,10 @@ fn main() {
     k.sort();
 
     let limit_csv = args.next().unwrap();
-    let limit_data = std::fs::read_to_string(limit_csv).unwrap();
+    let limit_data = match std::fs::read_to_string(limit_csv) {
+        Err(_) => panic!("Could not find csv for time limits"),
+        Ok(s) => s
+    };
     let mut limit = limit_data.lines();
     let event_list = limit.next().unwrap().split(",");
     let limit_data = limit.next().unwrap().split(",");
@@ -92,11 +175,12 @@ fn main() {
             _ => panic!("Malformatted time limit for event: {}", event)
         };
     });
-    let doc = scorecards_to_pdf(k, &args.next().unwrap(), &map, &limits);
+    let v = args.next().unwrap();
+    let doc = scorecards_to_pdf(k, &v, &map, &limits, language);
     doc.save(&mut BufWriter::new(File::create(format!("{}_scorecards.pdf", &csv[..csv.len() - 4])).unwrap())).unwrap();
 }
 
-fn scorecards_to_pdf(scorecards: Vec<Scorecard>, competition: &str, map: &HashMap<usize, &str>, limits: &HashMap<&str, TimeLimit>) -> PdfDocumentReference {
+fn scorecards_to_pdf(scorecards: Vec<Scorecard>, competition: &str, map: &HashMap<usize, &str>, limits: &HashMap<&str, TimeLimit>, language: Language) -> PdfDocumentReference {
     let (doc, page, layer) = PdfDocument::new("printpdf graphics test", Mm(210.0), Mm(297.0), "Layer 1");
     let mut pages = vec![(page, layer)];
     let mut scorecards: Vec<Option<Scorecard>> = scorecards.into_iter().map(|scorecard|Some(scorecard)).collect();
@@ -170,47 +254,59 @@ fn scorecards_to_pdf(scorecards: Vec<Scorecard>, competition: &str, map: &HashMa
         current_layer.add_shape(line2);
         current_layer.add_shape(line3);
 
-        let mut file = File::open("fonts/OpenSans-Regular.ttf").unwrap();
-        let font = doc.add_external_font(&file).unwrap();
-        let font2 = Font::from_file(&mut file, 0).unwrap();
+        let font3 = SystemSource::new().select_best_match(&[FamilyName::SansSerif],
+            &Properties::new().style(font_kit::properties::Style::Normal))
+            .unwrap();
+
+        let font = match &font3 {
+            Handle::Path {
+                path,
+                ..
+            } => doc.add_external_font(&File::open(path).unwrap()).unwrap(),
+            Handle::Memory {
+                ..
+            } => panic!("Let's hope it finds the path")
+        };
+
+        let font2 = font3.load().unwrap();
         let dash_pattern = LineDashPattern::new(0, None, None, None, None, None, None);
         current_layer.set_line_dash_pattern(dash_pattern);
 
         for (scorecard, number) in scorecards.into_iter().zip(0..6) {
             match scorecard {
                 None => (),
-                Some(v) => draw_scorecard(number, v, competition, &current_layer, &font, &font2, map, limits)
+                Some(v) => draw_scorecard(number, v, competition, &current_layer, &font, &font2, map, limits, &language)
             }
         }
     }
     doc
 }
 
-fn draw_scorecard(number: i8, Scorecard { id, round, group, station, event }: &Scorecard, competition: &str, current_layer: &PdfLayerReference, font: &IndirectFontRef, font2: &Font, map: &HashMap<usize, &str>, limits: &HashMap<&str, TimeLimit>) {
+fn draw_scorecard(number: i8, Scorecard { id, round, group, station, event }: &Scorecard, competition: &str, current_layer: &PdfLayerReference, font: &IndirectFontRef, font2: &Font, map: &HashMap<usize, &str>, limits: &HashMap<&str, TimeLimit>, language: &Language) {
     let (write_text, draw_square) = get_funcs(number, font2, current_layer, font);
     //Competiton
     write_text(competition, Alignment::Centered, 52.5, 7.0, 10.0);
     write_text(match *event {
-        "333" => "3x3x3 Cube",
-        "444" => "4x4x4 Cube",
-        "555" => "5x5x5 Cube",
-        "666" => "6x6x6 Cube",
-        "777" => "7x7x7 Cube",
-        "222" => "2x2x2 Cube",
-        "333oh" => "3x3x3 Cube One Handed",
+        "333" => &language.e333,
+        "444" => &language.e444,
+        "555" => &language.e555,
+        "666" => &language.e666,
+        "777" => &language.e777,
+        "222" => &language.e222,
+        "333oh" => &language.e333oh,
         "333fm" => "Filter out FMC",
-        "333bf" => "3x3x3 Cube Blindfolded",
-        "pyram" => "Pyraminx",
-        "333mbf" => "3x3x3 Cube Multi Blindfolded",
-        "minx" => "Megaminx",
-        "clock" => "Clock",
-        "444bf" => "4x4x4 Cube Blindfolded",
-        "555bf" => "5x5x5 Cube Blindfolded",
-        "skewb" => "Skewb",
-        "sq1" => "Square-1",
+        "333bf" => &language.e333bf,
+        "pyram" => &language.epyram,
+        "333mbf" => &language.e333mbf,
+        "minx" => &language.eminx,
+        "clock" => &language.eclock,
+        "444bf" => &language.e444bf,
+        "555bf" => &language.e555bf,
+        "skewb" => &language.eskewb,
+        "sq1" => &language.esq1,
         _ => "Please fix your csv"
     }, Alignment::Centered, 52.5, 12.0, 14.0);
-    write_text(&format!("Round: {} | Group: {}", round, group), Alignment::Centered, 52.5, 16.0, 10.0);
+    write_text(&format!("{}: {} | {}: {}", language.round, round, language.group, group), Alignment::Centered, 52.5, 16.0, 10.0);
     draw_square(5.0, 19.0, 10.0, 5.5);
     write_text(id.to_string().as_str(), Alignment::Centered, 10.0, 23.0, 10.0);
     draw_square(15.0, 19.0, 85.0, 5.5);
@@ -225,10 +321,10 @@ fn draw_scorecard(number: i8, Scorecard { id, round, group, station, event }: &S
     let distance = 8.2;
     let sign_box_width = 10.0;
     let mut attempts_start_height = 29.5;
-    write_text("scram", Alignment::Centered, 9.0 + sign_box_width / 2.0, attempts_start_height - 1.0, 8.0);
-    write_text("result", Alignment::Centered, (12.0 + 97.0 - sign_box_width) / 2.0, attempts_start_height - 1.0, 8.0);
-    write_text("judge", Alignment::Centered, 100.0 - sign_box_width - (sign_box_width / 2.0), attempts_start_height - 1.0, 8.0);
-    write_text("comp", Alignment::Centered, 100.0 - (sign_box_width / 2.0), attempts_start_height - 1.0, 8.0);
+    write_text(&language.scram, Alignment::Centered, 9.0 + sign_box_width / 2.0, attempts_start_height - 1.0, 7.0);
+    write_text(&language.result, Alignment::Centered, (12.0 + 97.0 - sign_box_width) / 2.0, attempts_start_height - 1.0, 7.0);
+    write_text(&language.judge, Alignment::Centered, 100.0 - sign_box_width - (sign_box_width / 2.0), attempts_start_height - 1.0, 7.0);
+    write_text(&language.comp, Alignment::Centered, 100.0 - (sign_box_width / 2.0), attempts_start_height - 1.0, 7.0);
     for i in 0..attempts_amount {
         let j = i as f64;
         draw_square(9.0, attempts_start_height + j * distance, sign_box_width, height);
@@ -239,7 +335,7 @@ fn draw_scorecard(number: i8, Scorecard { id, round, group, station, event }: &S
     }
 
     attempts_start_height += attempts_amount as f64 * distance + 4.0;
-    write_text("Extra attempts", Alignment::Centered, 52.5, attempts_start_height - 1.0, 8.0);
+    write_text(&language.extra_attempts, Alignment::Centered, 52.5, attempts_start_height - 1.0, 8.0);
     for i in 0..2 {
         let j = i as f64;
         draw_square(9.0, attempts_start_height + j * distance, sign_box_width, height);
@@ -250,34 +346,34 @@ fn draw_scorecard(number: i8, Scorecard { id, round, group, station, event }: &S
     }
 
     let limit = match &limits[event.clone()] {
-        TimeLimit::Single(z) => format!("Time limit: {}", time_string(*z)),
-        TimeLimit::Cumulative(z) => format!("Cumulative limit: {}", time_string(*z)),
-        TimeLimit::Cutoff(x, z) => format!("Two attempts to get below: {}, Time limt: {}", time_string(*x), time_string(*z)),
-        TimeLimit::SharedCumulative(z, vec) => format!("Cumlative limit: {} for {}", time_string(*z), vec.iter().map(|x|match *x {
-            "333" => "3x3x3 Cube",
-            "444" => "4x4x4 Cube",
-            "555" => "5x5x5 Cube",
-            "666" => "6x6x6 Cube",
-            "777" => "7x7x7 Cube",
-            "222" => "2x2x2 Cube",
-            "333oh" => "3x3x3 Cube One Handed",
+        TimeLimit::Single(z) => format!("{}: {}", language.time_limit, time_string(*z)),
+        TimeLimit::Cumulative(z) => format!("{}: {}", language.cumulative_limit, time_string(*z)),
+        TimeLimit::Cutoff(x, z) => format!("{}: {}, {}: {}", language.curoff, time_string(*x), language.time_limit, time_string(*z)),
+        TimeLimit::SharedCumulative(z, vec) => format!("{}: {} {} {}", language.cumulative_limit, time_string(*z), language.for_scl, vec.iter().map(|x|match *x {
+            "333" => &language.e333,
+            "444" => &language.e444,
+            "555" => &language.e555,
+            "666" => &language.e666,
+            "777" => &language.e777,
+            "222" => &language.e222,
+            "333oh" => &language.e333oh,
             "333fm" => "Filter out FMC",
-            "333bf" => "3x3x3 Cube Blindfolded",
-            "pyram" => "Pyraminx",
-            "333mbf" => "3x3x3 Cube Multi Blindfolded",
-            "minx" => "Megaminx",
-            "clock" => "Clock",
-            "444bf" => "4x4x4 Cube Blindfolded",
-            "555bf" => "5x5x5 Cube Blindfolded",
-            "skewb" => "Skewb",
-            "sq1" => "Square-1",
+            "333bf" => &language.e333bf,
+            "pyram" => &language.epyram,
+            "333mbf" => &language.e333mbf,
+            "minx" => &language.eminx,
+            "clock" => &language.eclock,
+            "444bf" => &language.e444bf,
+            "555bf" => &language.e555bf,
+            "skewb" => &language.eskewb,
+            "sq1" => &language.esq1,
             _ => "Please fix your csv"
-        }).collect::<Vec<_>>().join(" and ")),
-        TimeLimit::Multi => format!("10:00 per cube, up to 60:00"),
+        }).collect::<Vec<_>>().join(&format!(" {} ", language.and_scl))),
+        TimeLimit::Multi => language.multi_tl.to_owned(),
         TimeLimit::None => format!("")
     };
 
-    write_text(&limit, Alignment::Right, 100.0, 94.0, 8.0);
+    write_text(&limit, Alignment::Right, 100.0, 94.0, 7.0);
     write_text(station.to_string().as_str(), Alignment::Right, 100.0, 12.0, 25.0);
 }
 
