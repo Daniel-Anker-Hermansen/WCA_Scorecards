@@ -101,7 +101,7 @@ fn main() {
 
 fn run(language: Language) {
     let mut args = args();
-    let csv = args.next().unwrap();
+    let csv = args.nth(1).unwrap();
     let data = match std::fs::read_to_string(csv.clone()) {
         Err(_) => panic!("Could not find csv for groups and stations"),
         Ok(s) => s
