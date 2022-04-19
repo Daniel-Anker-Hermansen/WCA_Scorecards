@@ -35,7 +35,7 @@ impl Language {
         Language { 
             round: format!("Round"), 
             group: format!("Group"), 
-            scram: format!("scram"), 
+            scram: format!("scr"), 
             result: format!("result"), 
             judge: format!("judge"), 
             comp: format!("comp"), 

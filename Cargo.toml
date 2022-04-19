@@ -4,14 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[lib]
-name = "wca_scorecards"
-crate-type = ["cdylib"]
+# [lib]
+# name = "wca_scorecards"
+# crate-type = ["cdylib"]
 
 [dependencies]
-printpdf = "0.5.2"
-font-kit = "0.11.0"
+scorecards = { path = "scorecards"}
 
-[dependencies.pyo3]
-version = "0.16.4"
-features = ["extension-module"]
+# [dependencies.pyo3]
+# version = "0.16.4"
+# features = ["extension-module"]
