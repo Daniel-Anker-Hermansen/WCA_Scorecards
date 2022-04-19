@@ -1,11 +1,8 @@
-use font_kit::family_name::FamilyName;
-use font_kit::handle::Handle;
-use font_kit::loaders::default::Font;
-use font_kit::properties::Properties;
-use font_kit::source::SystemSource;
-use printpdf::{PdfDocumentReference, PdfDocument, Mm, Point, Line, LineDashPattern, Color, Greyscale, PdfLayerReference, IndirectFontRef};
-use std::{collections::HashMap, fs::File};
+use font_kit::{family_name::FamilyName, properties::Weight};
+use printpdf::{PdfDocumentReference, PdfDocument, Mm, Point, Line, LineDashPattern, Color, Greyscale, PdfLayerReference};
+use std::{collections::HashMap};
 use crate::language::Language;
+use super::font::{load_fonts, FontWidth, FontPDF};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Scorecard<'a> {
@@ -72,28 +69,16 @@ pub fn scorecards_to_pdf(scorecards: Vec<Scorecard>, competition: &str, map: &Ha
         current_layer.add_shape(line2);
         current_layer.add_shape(line3);
 
-        let handle = SystemSource::new().select_best_match(&[FamilyName::SansSerif],
-            &Properties::new().style(font_kit::properties::Style::Normal))
-            .unwrap();
-
-        let font = match &handle {
-            Handle::Path {
-                path,
-                ..
-            } => doc.add_external_font(&File::open(path).unwrap()).unwrap(),
-            Handle::Memory {
-                ..
-            } => panic!("Let's hope it finds the path")
-        };
-
-        let font_width = handle.load().unwrap();
+        let (font_width, font) = load_fonts(&doc, FamilyName::SansSerif, Weight::NORMAL);
+        let (font_width_bold, font_bold) = load_fonts(&doc, FamilyName::SansSerif, Weight::BOLD);
+        
         let dash_pattern = LineDashPattern::new(0, None, None, None, None, None, None);
         current_layer.set_line_dash_pattern(dash_pattern);
 
         for (scorecard, number) in scorecards.into_iter().zip(0..6) {
             match scorecard {
                 None => (),
-                Some(v) => draw_scorecard(number, v, competition, &current_layer, &font, &font_width, map, limits, &language)
+                Some(v) => draw_scorecard(number, v, competition, &current_layer, &font, &font_width, &font_bold, &font_width_bold, map, limits, &language)
             }
         }
     }
@@ -110,12 +95,17 @@ fn line_from_points(points: Vec<(Point, bool)>) -> Line {
     }
 }
 
-fn draw_scorecard(number: i8, Scorecard { id, round, group, station, event }: &Scorecard, competition: &str, current_layer: &PdfLayerReference, font: &IndirectFontRef, font2: &Font, map: &HashMap<usize, &str>, limits: &HashMap<&str, TimeLimit>, language: &Language) {
+fn draw_scorecard(number: i8, Scorecard { id, round, group, station, event }: &Scorecard, competition: &str, current_layer: &PdfLayerReference, font: &FontPDF, font2: &FontWidth,  font_bold: &FontPDF, font2_bold: &FontWidth, map: &HashMap<usize, &str>, limits: &HashMap<&str, TimeLimit>, language: &Language) {
     let (write_text, draw_square) = get_funcs(number, font2, current_layer, font);
+    let (write_bold_text, _) = get_funcs(number, font2_bold, current_layer, font_bold);
     let get_event = get_event_func(language);
     //Competiton
     write_text(competition, Alignment::Centered, 52.5, 7.0, 10.0);
-    write_text(&format!("{} | {}: {} | {}: {}", get_event(event), language.round, round, language.group, group), Alignment::Centered, 52.5, 11.5, 10.0);
+    let (round_text, event_text, group_text) = (format!("{}: {} | ", language.round, round), format!("{}", get_event(event)), format!(" | {}: {}", language.group, group));
+    let (round_width, event_width, group_width) = (get_width_of_string(font2, &round_text, 10.0), get_width_of_string(font2_bold, &event_text, 10.0), get_width_of_string(font2, &group_text, 10.0));
+    write_text(&round_text, Alignment::Left, 52.5 - (round_width + event_width + group_width) / 2.0, 11.5, 10.0);
+    write_bold_text(&event_text, Alignment::Left, 52.5 - (- round_width + event_width + group_width) / 2.0, 11.5, 10.0);
+    write_text(&group_text, Alignment::Left, 52.5 - (- round_width - event_width + group_width) / 2.0, 11.5, 10.0);
     draw_square(5.0, 15.0, 10.0, 5.5);
     write_text(id.to_string().as_str(), Alignment::Centered, 10.0, 19.0, 10.0);
     draw_square(15.0, 15.0, 85.0, 5.5);
@@ -164,7 +154,7 @@ fn draw_scorecard(number: i8, Scorecard { id, round, group, station, event }: &S
     };
 
     write_text(&limit, Alignment::Right, 100.0, 94.0, 7.0);
-    write_text(station.to_string().as_str(), Alignment::Right, 100.0, 12.0, 25.0);
+    write_bold_text(station.to_string().as_str(), Alignment::Right, 100.0, 12.0, 25.0);
 }
 
 fn time_string(mut z: usize) -> String {
@@ -184,7 +174,7 @@ enum Alignment {
     Right
 }
 
-fn get_funcs<'a>(number: i8, font_path: &'a Font, current_layer: &'a PdfLayerReference, font: &'a IndirectFontRef) -> (
+fn get_funcs<'a>(number: i8, font_path: &'a FontWidth, current_layer: &'a PdfLayerReference, font: &'a FontPDF) -> (
     Box<dyn 'a + Fn(&str, Alignment, f64, f64, f64)>,
     Box<dyn 'a + Fn(f64, f64, f64, f64)>) {
     let (x, y) = match number {
@@ -247,7 +237,7 @@ fn get_event_func<'a>(language: &'a Language) -> Box<dyn 'a + Fn(&str) -> &'a st
     })
 }
 
-fn get_width_of_string(font: &Font, string: &str, font_size: f64) -> f64 {
+fn get_width_of_string(font: &FontWidth, string: &str, font_size: f64) -> f64 {
     let upem = font.metrics().units_per_em;
     let mut width = 0.0;
     for char in string.chars() {
