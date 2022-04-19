@@ -26,25 +26,25 @@ pub enum TimeLimit<'a> {
 }
 
 pub fn scorecards_to_pdf(scorecards: Vec<Scorecard>, competition: &str, map: &HashMap<usize, &str>, limits: &HashMap<&str, TimeLimit>, language: Language) -> PdfDocumentReference {
-    let (doc, page, layer) = PdfDocument::new("printpdf graphics test", Mm(210.0), Mm(297.0), "Layer 1");
+    let (doc, page, layer) = PdfDocument::new(competition, Mm(210.0), Mm(297.0), "Layer 1");
     let mut pages = vec![(page, layer)];
     let mut scorecards: Vec<Option<Scorecard>> = scorecards.into_iter().map(|scorecard|Some(scorecard)).collect();
     while scorecards.len() % 6 != 0 {
         scorecards.push(None);
     }
 
-    let n_pages = (scorecards.len() + 5) / 6;
+    let n_pages = scorecards.len() / 6;
     scorecards = (0..scorecards.len()).map(|x|{
         let page = x / 6;
         let pos = x % 6;
         scorecards[pos * n_pages + page]
-    }).collect::<Vec<_>>();
+    }).collect::<Vec<Option<Scorecard>>>();
 
     let mut scorecard_pages = vec![];
-    for i in 0..scorecards.len() / 6 {
+    for i in 0..n_pages {
         scorecard_pages.push(&scorecards[(i * 6)..(i * 6) + 6])
     }
-    for _ in 0..scorecard_pages.len() - 1 {
+    for _ in 1..scorecard_pages.len() {
         let (page, layer) = doc.add_page(Mm(210.0), Mm(297.0), "Layer 1");
         pages.push((page, layer));
     }
@@ -115,12 +115,11 @@ fn draw_scorecard(number: i8, Scorecard { id, round, group, station, event }: &S
     let get_event = get_event_func(language);
     //Competiton
     write_text(competition, Alignment::Centered, 52.5, 7.0, 10.0);
-    write_text(get_event(event), Alignment::Centered, 52.5, 12.0, 14.0);
-    write_text(&format!("{}: {} | {}: {}", language.round, round, language.group, group), Alignment::Centered, 52.5, 16.0, 10.0);
-    draw_square(5.0, 19.0, 10.0, 5.5);
-    write_text(id.to_string().as_str(), Alignment::Centered, 10.0, 23.0, 10.0);
-    draw_square(15.0, 19.0, 85.0, 5.5);
-    write_text(map[id], Alignment::Left, 16.0, 23.0, 10.0);
+    write_text(&format!("{} | {}: {} | {}: {}", get_event(event), language.round, round, language.group, group), Alignment::Centered, 52.5, 11.5, 10.0);
+    draw_square(5.0, 15.0, 10.0, 5.5);
+    write_text(id.to_string().as_str(), Alignment::Centered, 10.0, 19.0, 10.0);
+    draw_square(15.0, 15.0, 85.0, 5.5);
+    write_text(map[id], Alignment::Left, 16.0, 19.0, 10.0);
 
     let attempts_amount = match *event {
         "666" | "777" | "333mbf" | "333bf" | "444bf" | "555bf" => 3,
@@ -128,9 +127,9 @@ fn draw_scorecard(number: i8, Scorecard { id, round, group, station, event }: &S
     };
 
     let height = 8.2;
-    let distance = 8.2;
+    let distance = 8.8;
     let sign_box_width = 10.0;
-    let mut attempts_start_height = 29.5;
+    let mut attempts_start_height = 25.5;
     write_text(&language.scram, Alignment::Centered, 9.0 + sign_box_width / 2.0, attempts_start_height - 1.0, 7.0);
     write_text(&language.result, Alignment::Centered, (12.0 + 97.0 - sign_box_width) / 2.0, attempts_start_height - 1.0, 7.0);
     write_text(&language.judge, Alignment::Centered, 100.0 - sign_box_width - (sign_box_width / 2.0), attempts_start_height - 1.0, 7.0);
@@ -144,8 +143,8 @@ fn draw_scorecard(number: i8, Scorecard { id, round, group, station, event }: &S
         draw_square(100.0 - sign_box_width, attempts_start_height + j * distance, sign_box_width, height);
     }
 
-    attempts_start_height += attempts_amount as f64 * distance + 4.0;
-    write_text(&language.extra_attempts, Alignment::Centered, 52.5, attempts_start_height - 1.0, 8.0);
+    attempts_start_height += attempts_amount as f64 * distance + 3.8;
+    write_text(&language.extra_attempts, Alignment::Centered, 52.5, attempts_start_height - 1.0, 7.0);
     for i in 0..2 {
         let j = i as f64;
         draw_square(9.0, attempts_start_height + j * distance, sign_box_width, height);
@@ -185,7 +184,6 @@ enum Alignment {
     Right
 }
 
-#[inline]
 fn get_funcs<'a>(number: i8, font_path: &'a Font, current_layer: &'a PdfLayerReference, font: &'a IndirectFontRef) -> (
     Box<dyn 'a + Fn(&str, Alignment, f64, f64, f64)>,
     Box<dyn 'a + Fn(f64, f64, f64, f64)>) {

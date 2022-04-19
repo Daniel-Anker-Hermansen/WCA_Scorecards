@@ -15,7 +15,7 @@ fn wca_scorecards(_py: Python, m: &PyModule) -> PyResult<()> {
 
 #[pyfunction]
 fn print_pdf(_py: Python, csv1: &str, csv2: &str, comp: &str) -> PyResult<()> {
-    run(&mut [csv1, csv2, comp].iter(), Language::english());
+    run(&mut [csv1, csv2, comp].iter().map(|x|x.to_string()), Language::english());
     Ok(())
 }
 
@@ -65,6 +65,6 @@ fn print_pdf_with_language(_py: Python, csv1: &str, csv2: &str, comp: &str, lang
                 _ => (),
             }
         });
-    run(&mut [csv1, csv2, comp].iter(), lang);
+    run(&mut [csv1, csv2, comp].iter().map(|x|x.to_string()), lang);
     Ok(())
 }

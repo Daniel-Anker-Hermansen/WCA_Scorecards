@@ -6,7 +6,7 @@ use scorecard::{Scorecard, TimeLimit, scorecards_to_pdf};
 
 mod scorecard;
 
-pub fn run(args: &mut std::slice::Iter<'_, &str>, language: Language) {
+pub fn run<I>(args: &mut I, language: Language) where I: Iterator<Item = String> {
     let csv = args.next().unwrap();
     let data = match std::fs::read_to_string(csv.clone()) {
         Err(_) => panic!("Could not find csv for groups and stations"),
@@ -83,7 +83,7 @@ pub fn run(args: &mut std::slice::Iter<'_, &str>, language: Language) {
     });
     let doc = scorecards_to_pdf(k, match args.next() {
         None => "No competion name given",
-        Some(v) => v
+        Some(ref mut v) => v.as_str()
     }, &map, &limits, language);
     doc.save(&mut BufWriter::new(File::create(format!("{}_scorecards.pdf", &csv[..csv.len() - 4])).unwrap())).unwrap();
 }
