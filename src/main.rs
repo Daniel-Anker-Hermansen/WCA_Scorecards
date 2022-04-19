@@ -6,5 +6,5 @@ mod language;
 mod pdf;
 
 fn main() {
-    run(&mut args(), Language::english());
+    run(&mut args().skip(1), Language::english());
 }

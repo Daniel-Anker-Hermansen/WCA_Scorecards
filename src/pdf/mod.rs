@@ -6,10 +6,12 @@ use scorecard::{Scorecard, TimeLimit, scorecards_to_pdf};
 
 mod scorecard;
 
+mod font;
+
 pub fn run<I>(args: &mut I, language: Language) where I: Iterator<Item = String> {
     let csv = args.next().unwrap();
     let data = match std::fs::read_to_string(csv.clone()) {
-        Err(_) => panic!("Could not find csv for groups and stations"),
+        Err(e) => panic!("Could not find csv for groups and stations: {}", e),
         Ok(s) => s
     };
     let mut csv_file = data.lines();
@@ -81,9 +83,11 @@ pub fn run<I>(args: &mut I, language: Language) where I: Iterator<Item = String>
             _ => panic!("Malformatted time limit for event: {}", event)
         };
     });
-    let doc = scorecards_to_pdf(k, match args.next() {
+    let mut competition_option = args.next();
+    let competition = match competition_option {
         None => "No competion name given",
         Some(ref mut v) => v.as_str()
-    }, &map, &limits, language);
-    doc.save(&mut BufWriter::new(File::create(format!("{}_scorecards.pdf", &csv[..csv.len() - 4])).unwrap())).unwrap();
+    };
+    let doc = scorecards_to_pdf(k, competition, &map, &limits, language);
+    doc.save(&mut BufWriter::new(File::create(competition.split_ascii_whitespace().collect::<String>() + ".pdf").unwrap())).unwrap();
 }
