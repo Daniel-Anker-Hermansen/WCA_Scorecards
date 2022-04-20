@@ -7,8 +7,6 @@ use scorecard::{Scorecard, TimeLimit, scorecards_to_pdf};
 mod scorecard;
 mod font;
 
-mod font;
-
 pub fn run<I>(args: &mut I, language: Language) where I: Iterator<Item = String> {
     let csv = args.next().unwrap();
     let data = match std::fs::read_to_string(csv.clone()) {
