@@ -5,6 +5,7 @@ use crate::language::Language;
 use scorecard::{Scorecard, TimeLimit, scorecards_to_pdf};
 
 mod scorecard;
+mod font;
 
 mod font;
 
