@@ -4,7 +4,7 @@ use std::io::BufWriter;
 use crate::language::Language;
 use scorecard::{Scorecard, TimeLimit, scorecards_to_pdf};
 
-mod scorecard;
+pub mod scorecard;
 mod font;
 
 pub fn run<I>(args: &mut I, language: Language) where I: Iterator<Item = String> {
@@ -22,7 +22,7 @@ pub fn run<I>(args: &mut I, language: Language) where I: Iterator<Item = String>
             let mut iter = person.split(",");
             let name = iter.next().unwrap();
             let id = usize::from_str_radix(iter.next().unwrap(), 10).unwrap();
-            map.insert(id, name);
+            map.insert(id, name.to_string());
             iter.zip(header.clone()).map(move |(asign, event)|{
                 if asign == "" {
                     return (id, event, None, None)
@@ -88,5 +88,44 @@ pub fn run<I>(args: &mut I, language: Language) where I: Iterator<Item = String>
         Some(ref mut v) => v.as_str()
     };
     let doc = scorecards_to_pdf(k, competition, &map, &limits, language);
+    doc.save(&mut BufWriter::new(File::create(competition.split_ascii_whitespace().collect::<String>() + ".pdf").unwrap())).unwrap();
+}
+
+pub fn run_from_wcif(id: &str, event: &str, round: usize, max_group_size: usize) {
+    let (competitors, map, limit, competition) = super::wcif::get_scorecard_info_for_round(id, event, round);
+
+    let mut limits = HashMap::new();
+    limits.insert(event, limit);
+
+    let number_of_groups = (competitors.len() + max_group_size - 1) / max_group_size;
+    let group_size = competitors.len() / number_of_groups;
+    let modulo = competitors.len() % number_of_groups;
+    let mut curr_group = 1;
+    let mut curr_station = 0;
+
+    let s = competitors.iter()
+        .map(|id| {
+            let this_group_size = group_size + match modulo >= curr_group {
+                true => 1,
+                false => 0
+            };
+            curr_station += 1;
+            if curr_station > this_group_size {
+                curr_station = 1;
+                curr_group += 1;
+            }
+            (*id, curr_group, curr_station)
+        });
+    let k = s.map(|(id, group, station)|{
+        Scorecard {
+            event,
+            round: round as i8,
+            group: group as i8,
+            station: station as i8,
+            id: id
+        }
+    }).collect::<Vec<_>>();
+    
+    let doc = scorecards_to_pdf(k, &competition, &map, &limits, Language::english());
     doc.save(&mut BufWriter::new(File::create(competition.split_ascii_whitespace().collect::<String>() + ".pdf").unwrap())).unwrap();
 }

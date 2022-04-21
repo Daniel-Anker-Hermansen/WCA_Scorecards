@@ -2,7 +2,16 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 pub struct Wcif {
-    pub events: Vec<Event>
+    pub name: String,
+    pub events: Vec<Event>,
+    pub persons: Vec<Person>
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Person {
+    pub name: String,
+    pub registrant_id: Option<usize>
 }
 
 #[derive(Deserialize, Debug)]
@@ -14,6 +23,7 @@ pub struct Event {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Round {
+    pub id: String,
     pub time_limit: serde_json::Value,
     pub cutoff: Option<usize>,
     pub advancement_condition: Option<AdvancementCondition>,

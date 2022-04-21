@@ -22,7 +22,7 @@ pub enum TimeLimit<'a> {
     None
 }
 
-pub fn scorecards_to_pdf(scorecards: Vec<Scorecard>, competition: &str, map: &HashMap<usize, &str>, limits: &HashMap<&str, TimeLimit>, language: Language) -> PdfDocumentReference {
+pub fn scorecards_to_pdf(scorecards: Vec<Scorecard>, competition: &str, map: &HashMap<usize, String>, limits: &HashMap<&str, TimeLimit>, language: Language) -> PdfDocumentReference {
     let (doc, page, layer) = PdfDocument::new(competition, Mm(210.0), Mm(297.0), "Layer 1");
     let mut pages = vec![(page, layer)];
     let mut scorecards: Vec<Option<Scorecard>> = scorecards.into_iter().map(|scorecard|Some(scorecard)).collect();
@@ -95,7 +95,7 @@ fn line_from_points(points: Vec<(Point, bool)>) -> Line {
     }
 }
 
-fn draw_scorecard(number: i8, Scorecard { id, round, group, station, event }: &Scorecard, competition: &str, current_layer: &PdfLayerReference, font: &FontPDF, font2: &FontWidth,  font_bold: &FontPDF, font2_bold: &FontWidth, map: &HashMap<usize, &str>, limits: &HashMap<&str, TimeLimit>, language: &Language) {
+fn draw_scorecard(number: i8, Scorecard { id, round, group, station, event }: &Scorecard, competition: &str, current_layer: &PdfLayerReference, font: &FontPDF, font2: &FontWidth,  font_bold: &FontPDF, font2_bold: &FontWidth, map: &HashMap<usize, String>, limits: &HashMap<&str, TimeLimit>, language: &Language) {
     let (write_text, draw_square) = get_funcs(number, font2, current_layer, font);
     let (write_bold_text, _) = get_funcs(number, font2_bold, current_layer, font_bold);
     let get_event = get_event_func(language);
@@ -109,7 +109,7 @@ fn draw_scorecard(number: i8, Scorecard { id, round, group, station, event }: &S
     draw_square(5.0, 15.0, 10.0, 5.5);
     write_text(id.to_string().as_str(), Alignment::Centered, 10.0, 19.0, 10.0);
     draw_square(15.0, 15.0, 85.0, 5.5);
-    write_text(map[id], Alignment::Left, 16.0, 19.0, 10.0);
+    write_text(&map[id], Alignment::Left, 16.0, 19.0, 10.0);
 
     let attempts_amount = match *event {
         "666" | "777" | "333mbf" | "333bf" | "444bf" | "555bf" => 3,
@@ -237,7 +237,7 @@ fn get_event_func<'a>(language: &'a Language) -> Box<dyn 'a + Fn(&str) -> &'a st
     })
 }
 
-fn get_width_of_string(font: &FontWidth, string: &str, font_size: f64) -> f64 {
+pub fn get_width_of_string(font: &FontWidth, string: &str, font_size: f64) -> f64 {
     let upem = font.metrics().units_per_em;
     let mut width = 0.0;
     for char in string.chars() {
