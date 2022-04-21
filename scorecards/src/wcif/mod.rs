@@ -1,9 +1,12 @@
 ///Module for creating data structure from json file in wcif format
 pub mod json;
+mod oauth;
 
 use json::*;
 
-pub fn get_advancement(json: String) -> () {
+pub fn get_advancement(id: &str) -> () {
+    let json = oauth::get_wcif(id);
+
     let wcif = json::parse(json);  
 
     wcif.events.iter().for_each(|event| {
