@@ -51,7 +51,7 @@ pub async fn get_wcif(id: &str) -> String {
 
     //Request wcif
     let response = client
-        .get("https://www.worldcubeassociation.org/api/v0/competitions/dastrupsleepover2022/wcif")
+        .get(get_url)
         .header("Authorization", format!("Bearer {}", auth_response.access_token))
         .send()
         .await.unwrap()
