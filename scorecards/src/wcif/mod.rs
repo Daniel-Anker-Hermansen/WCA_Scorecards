@@ -1,6 +1,6 @@
 ///Module for creating data structure from json file in wcif format
 pub mod json;
-mod oauth;
+pub mod oauth;
 
 use std::collections::HashMap;
 
@@ -8,20 +8,35 @@ use json::*;
 
 use crate::pdf::scorecard::TimeLimit;
 
-pub fn get_scorecard_info_for_round(id: &str, event: &str, round: usize) -> (Vec<usize>, HashMap<usize, String>, TimeLimit<'static>, String) {
-    let json = oauth::get_wcif(id);
-
-    let wcif = json::parse(json);  
+pub fn get_scorecard_info_for_round(id: &str, event: &str, round: usize) -> (Vec<usize>, HashMap<usize, String>, TimeLimit, String) {
+    let oauth = oauth::OAuth::get_auth();
+    let json = oauth.get_wcif(id);
+    let wcif = json::parse(json);
     
     let id_map = get_id_map(&wcif.persons);
 
+    //Get advancement
     let activity_id = format!("{}-r{}", event, round - 1);
-
     let round_json = wcif.events.iter().map(|event|event.rounds.iter()).flatten().find(|round| round.id == activity_id).unwrap();
-
     let advancement_ids = get_advancement_ids(&round_json, &round_json.advancement_condition);
 
-    (advancement_ids, id_map, TimeLimit::Single(60000), wcif.name)
+    //Get time limit
+    let activity_id = format!("{}-r{}", event, round);
+    let round_json = wcif.events.iter().map(|event|event.rounds.iter()).flatten().find(|round| round.id == activity_id).unwrap();
+    let time_limit = match &round_json.time_limit {
+        None => TimeLimit::Multi,
+        Some(v) => {
+            match round_json.cutoff {
+                None => match v.cumulative_round_ids.len() {
+                    0 => TimeLimit::Single(v.centiseconds),
+                    1 => TimeLimit::Cumulative(v.centiseconds),
+                    _ => TimeLimit::SharedCumulative(v.centiseconds, v.cumulative_round_ids.clone())
+                }
+                Some(ref c) => TimeLimit::Cutoff(v.centiseconds, c.attempt_result)
+            }
+        }
+    };
+    (advancement_ids, id_map, time_limit, wcif.name)
 }
 
 fn get_advancement_amount(round: &Round, advancement_condition: &Option<AdvancementCondition>) -> Option<usize> {

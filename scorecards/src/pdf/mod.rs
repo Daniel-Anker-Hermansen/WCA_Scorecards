@@ -77,7 +77,7 @@ pub fn run<I>(args: &mut I, language: Language) where I: Iterator<Item = String>
             "T" => limits.insert(event, TimeLimit::Single(usize::from_str_radix(iter.next().unwrap(), 10).unwrap())),
             "C" => limits.insert(event, TimeLimit::Cumulative(usize::from_str_radix(iter.next().unwrap(), 10).unwrap())),
             "K" => limits.insert(event, TimeLimit::Cutoff(usize::from_str_radix(iter.next().unwrap(), 10).unwrap(), usize::from_str_radix(iter.next().unwrap(), 10).unwrap())),
-            "S" => limits.insert(event, TimeLimit::SharedCumulative(usize::from_str_radix(iter.next().unwrap(), 10).unwrap(), iter.collect::<Vec<_>>())),
+            "S" => limits.insert(event, TimeLimit::SharedCumulative(usize::from_str_radix(iter.next().unwrap(), 10).unwrap(), iter.map(|x|x.to_string()).collect::<Vec<_>>())),
             "M" => limits.insert(event, TimeLimit::Multi),
             _ => panic!("Malformatted time limit for event: {}", event)
         };

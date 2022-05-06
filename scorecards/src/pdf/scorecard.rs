@@ -13,10 +13,10 @@ pub struct Scorecard<'a> {
     pub id: usize,
 }
 
-pub enum TimeLimit<'a> {
+pub enum TimeLimit {
     Single(usize),
     Cumulative(usize),
-    SharedCumulative(usize, Vec<&'a str>),
+    SharedCumulative(usize, Vec<String>),
     Cutoff(usize, usize),
     Multi,
     None

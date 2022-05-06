@@ -24,10 +24,24 @@ pub struct Event {
 #[serde(rename_all = "camelCase")]
 pub struct Round {
     pub id: String,
-    pub time_limit: serde_json::Value,
-    pub cutoff: Option<usize>,
+    pub time_limit: Option<TimeLimit>,
+    pub cutoff: Option<Cutoff>,
     pub advancement_condition: Option<AdvancementCondition>,
     pub results: Vec<Result>
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct TimeLimit {
+    pub centiseconds: usize,
+    pub cumulative_round_ids: Vec<String>
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Cutoff {
+    pub number_of_attempts: usize,
+    pub attempt_result: usize
 }
 
 #[derive(Deserialize, Debug)]
