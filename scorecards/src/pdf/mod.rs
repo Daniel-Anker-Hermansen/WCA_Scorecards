@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufWriter;
-use crate::language::Language;
+use crate::{language::Language, wcif::json::Wcif};
 use scorecard::{Scorecard, TimeLimit, scorecards_to_pdf};
 
 pub mod scorecard;
@@ -91,8 +91,8 @@ pub fn run<I>(args: &mut I, language: Language) where I: Iterator<Item = String>
     doc.save(&mut BufWriter::new(File::create(competition.split_ascii_whitespace().collect::<String>() + ".pdf").unwrap())).unwrap();
 }
 
-pub fn run_from_wcif(id: &str, event: &str, round: usize, max_group_size: usize) {
-    let (competitors, map, limit, competition) = super::wcif::get_scorecard_info_for_round(id, event, round);
+pub fn run_from_wcif(wcif: Wcif, event: &str, round: usize, max_group_size: usize) -> Vec<u8> {
+    let (competitors, map, limit, competition) = super::wcif::get_scorecard_info_for_round(wcif, event, round);
 
     let mut limits = HashMap::new();
     limits.insert(event, limit);
@@ -127,5 +127,5 @@ pub fn run_from_wcif(id: &str, event: &str, round: usize, max_group_size: usize)
     }).collect::<Vec<_>>();
     
     let doc = scorecards_to_pdf(k, &competition, &map, &limits, Language::english());
-    doc.save(&mut BufWriter::new(File::create(competition.split_ascii_whitespace().collect::<String>() + ".pdf").unwrap())).unwrap();
+    doc.save_to_bytes().unwrap()
 }

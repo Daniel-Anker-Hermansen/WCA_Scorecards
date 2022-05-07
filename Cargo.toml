@@ -14,5 +14,3 @@ scorecards = { path = "scorecards"}
 # [dependencies.pyo3]
 # version = "0.16.4"
 # features = ["extension-module"]
-tokio = { version = "1", features = ["full"] }
-warp = "0.3"

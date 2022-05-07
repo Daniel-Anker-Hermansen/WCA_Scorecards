@@ -8,11 +8,20 @@ use json::*;
 
 use crate::pdf::scorecard::TimeLimit;
 
-pub fn get_scorecard_info_for_round(id: &str, event: &str, round: usize) -> (Vec<usize>, HashMap<usize, String>, TimeLimit, String) {
-    let oauth = oauth::OAuth::get_auth();
-    let json = oauth.get_wcif(id);
-    let wcif = json::parse(json);
-    
+pub fn get_rounds(wcif: Wcif) -> Vec<(String, usize)> {
+    wcif.events.iter()
+        .map(|event|event.rounds
+            .iter()
+            .map(|round|round.id.to_string()))
+        .flatten()
+        .map(|str|{
+            let mut iter = str.split("-r");
+            (iter.next().unwrap().to_string(), usize::from_str_radix(iter.next().unwrap(), 10).unwrap())
+        })
+        .collect()
+}
+
+pub fn get_scorecard_info_for_round(wcif: Wcif, event: &str, round: usize) -> (Vec<usize>, HashMap<usize, String>, TimeLimit, String) {
     let id_map = get_id_map(&wcif.persons);
 
     //Get advancement

@@ -61,6 +61,5 @@ pub struct Result {
 }
 
 pub fn parse(json: String) -> Wcif {
-    let p = serde_json::from_str(&json).unwrap();
-    p
+    serde_json::from_str(&json).unwrap()
 }
