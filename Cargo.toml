@@ -9,7 +9,7 @@ edition = "2021"
 # crate-type = ["cdylib"]
 
 [dependencies]
-scorecards = { path = "scorecards"}
+wca_scorecards_lib = { git = "https://github.com/Daniel-Anker-Hermansen/wca_scorecards_lib"}
 
 # [dependencies.pyo3]
 # version = "0.16.4"
