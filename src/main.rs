@@ -11,7 +11,6 @@ fn main() {
                 (Some(group_csv), Some(limit_csv), Some(competition)) => print_round_1_english(&group_csv, &limit_csv, &competition),
                 _ => panic!("Malformatted r1 arguments")
             }
-            unimplemented!()
         }
         Some(v) if &v == "--subseq" => {
             match args.next() {
