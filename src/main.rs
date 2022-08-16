@@ -23,7 +23,7 @@ fn main() {
                             inner_stages.add_stage(None, inner_iter[0].parse().unwrap());
                         }
                         else {
-                            inner_stages.add_stage(Some(inner_iter[0].chars().next().unwrap()), inner_iter[1].parse().unwrap());
+                            inner_stages.add_stage(Some(inner_iter[0].to_string()), inner_iter[1].parse().unwrap());
                         }
 
                     }
