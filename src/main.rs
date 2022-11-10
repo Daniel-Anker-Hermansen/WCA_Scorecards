@@ -9,6 +9,7 @@ fn main() {
     let mut iter = args.skip(1).peekable();
     while let Some(command) = iter.next() {
         match command.as_str() {
+            "--log" => set_logging(true),
             "--r1" if r1.is_none() => r1 = Some((iter.next().unwrap(), iter.next().unwrap(), iter.next().unwrap())),
             "--r1" if r1.is_some() => panic!("Specified --r1 twice"),
             "--subseq" if subseq.is_none() => subseq = Some(iter.next().unwrap()),
