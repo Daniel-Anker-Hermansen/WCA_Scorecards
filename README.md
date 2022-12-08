@@ -1,4 +1,4 @@
-## Installation on Linux
+## Installation on Linux (using apt)
 
 Running all of the below commands from a freshly installed linux distribution should get the program working.
 
