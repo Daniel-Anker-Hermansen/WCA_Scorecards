@@ -6,9 +6,6 @@ struct Args {
     /// Competition name
     competion: String,
 
-    /// Number of solving stations per stage
-    capacity: u32,
-
     /// Command
     #[structopt(subcommand)]
     command: Command,
@@ -27,10 +24,16 @@ enum Command {
 
         /// Path to limit csvs. If unspecified no time limits will be written on the scorecards
         limit: Option<String>,
+
+        ///Number of stations per stage. If unspecified it is infinite
+        stations: Option<u32>
     },
 
     /// Generate from WCIF
-    Wcif,
+    Wcif {
+        /// Number of solving stations per stage
+        stations: u32,
+    },
 
     /// Generate sheet with blank scorecards
     Blank,
@@ -39,13 +42,12 @@ enum Command {
 fn main() {
     let args = Args::from_args();
 
-    let stages = Stages::new(args.stages, args.capacity);
-
     match args.command {
-        Command::Csv { groups, limit } => {
-            print_round_1_english(&groups, limit, &args.competion, stages);
+        Command::Csv { groups, limit, stations } => {
+            print_round_1_english(&groups, limit, &args.competion, Stages::new(u32::MAX, stations.unwrap_or(u32::MAX)));
         },
-        Command::Wcif => {
+        Command::Wcif { stations } => {
+            let stages = Stages::new(args.stages, stations);
             print_subsequent_rounds(args.competion, stages)
         },
         Command::Blank => {
