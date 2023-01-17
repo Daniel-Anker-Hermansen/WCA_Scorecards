@@ -1,10 +1,10 @@
 [package]
 name = "wca_scorecards"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+structopt = "0.3.26"
 wca_scorecards_lib = { git = "https://github.com/Daniel-Anker-Hermansen/WCA_tools_lib" }
-#wca_scorecards_lib = { path = "../WCA_tools_lib/wca_scorecards_lib"}

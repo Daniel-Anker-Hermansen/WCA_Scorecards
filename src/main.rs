@@ -1,51 +1,55 @@
+use structopt::StructOpt;
 use wca_scorecards_lib::*;
-use std::env::args;
+
+#[derive(StructOpt, Debug)]
+struct Args {
+    /// Competition name
+    competion: String,
+
+    /// Number of solving stations per stage
+    capacity: u32,
+
+    /// Command
+    #[structopt(subcommand)]
+    command: Command,
+
+    /// Number of stages used
+    #[structopt(long, short, global = true, default_value = "1")]
+    stages: u32,
+}
+
+#[derive(StructOpt, Debug)]
+enum Command {
+    /// Generate from DVE csvs
+    Csv {
+        /// Path to groups csv
+        groups: String,
+
+        /// Path to limit csvs. If unspecified no time limits will be written on the scorecards
+        limit: Option<String>,
+    },
+
+    /// Generate from WCIF
+    Wcif,
+
+    /// Generate sheet with blank scorecards
+    Blank,
+}
 
 fn main() {
-    let args = args();
-    let mut stages = None;
-    let mut r1 = None;
-    let mut subseq = None;
-    let mut iter = args.skip(1).peekable();
-    while let Some(command) = iter.next() {
-        match command.as_str() {
-            "--log" => set_logging(true),
-            "--r1" if r1.is_none() => r1 = Some((iter.next().unwrap(), iter.next().unwrap(), iter.next().unwrap())),
-            "--r1" if r1.is_some() => panic!("Specified --r1 twice"),
-            "--subseq" if subseq.is_none() => subseq = Some(iter.next().unwrap()),
-            "--subseq" if subseq.is_some() => panic!("Specified --subseq twice"),
-            "--stages" if stages.is_none() => {
-                let mut inner_stages = Stages::new();
-                while let Some(v) = iter.peek() {
-                    if !v.contains("--") {
-                        let v = iter.next().unwrap();
-                        let inner_iter = v.split("-").collect::<Vec<_>>();
-                        if inner_iter.len() == 1 {
-                            inner_stages.add_stage(None, inner_iter[0].parse().unwrap());
-                        }
-                        else {
-                            inner_stages.add_stage(Some(inner_iter[0].to_string()), inner_iter[1].parse().unwrap());
-                        }
+    let args = Args::from_args();
 
-                    }
-                    else {
-                        break;                        
-                    }
-                }
-                stages = Some(inner_stages);
-            }
-            "--stages" if stages.is_some() => panic!("Cannot specify stages twice"),
-            _ => panic!("Invalid command given"),
-        }
-    }
+    let stages = Stages::new(args.stages, args.capacity);
 
-    if r1.is_some() && subseq.is_some() {
-        panic!("--r1 and --subseq are mutually exclusive");
-    }
-    else if let Some((group_csv, limit_csv, competition)) = r1 {
-        print_round_1_english(&group_csv, &limit_csv, &competition, stages);
-    }
-    else if let Some(id) = subseq {
-        print_subsequent_rounds(id, stages);
+    match args.command {
+        Command::Csv { groups, limit } => {
+            print_round_1_english(&groups, limit, &args.competion, stages);
+        },
+        Command::Wcif => {
+            print_subsequent_rounds(args.competion, stages)
+        },
+        Command::Blank => {
+            blank_scorecard_page(&args.competion)
+        },
     }
 }
