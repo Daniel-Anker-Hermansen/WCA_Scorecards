@@ -11,8 +11,12 @@ struct Args {
     command: Command,
 
     /// Number of stages used
-    #[structopt(long, short, global = true, default_value = "1")]
+    #[structopt(long, short, default_value = "1")]
     stages: u32,
+
+    /// Sort by name instead of groups.
+    #[structopt(name = "sort-by-name", long)]
+    sort_by_name: bool,
 }
 
 #[derive(StructOpt, Debug)]
@@ -44,14 +48,15 @@ fn main() {
 
     match args.command {
         Command::Csv { groups, limit, stations } => {
-            print_round_1_english(&groups, limit, &args.competion, Stages::new(u32::MAX, stations.unwrap_or(u32::MAX)));
+            let stages = Stages::new(u32::MAX, stations.unwrap_or(u32::MAX));
+            print_round_1_english(&groups, limit, &args.competion, stages, args.sort_by_name);
         },
         Command::Wcif { stations } => {
             let stages = Stages::new(args.stages, stations);
-            print_subsequent_rounds(args.competion, stages)
+            print_subsequent_rounds(args.competion, stages, args.sort_by_name);
         },
         Command::Blank => {
-            blank_scorecard_page(&args.competion)
+            blank_scorecard_page(&args.competion);
         },
     }
 }
